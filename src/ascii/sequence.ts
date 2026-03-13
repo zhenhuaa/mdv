@@ -11,9 +11,10 @@
 
 import { parseSequenceDiagram } from '../sequence/parser.ts'
 import type { SequenceDiagram, Block } from '../sequence/types.ts'
-import type { Canvas, AsciiConfig, RoleCanvas, CharRole, AsciiTheme, ColorMode } from './types.ts'
-import { mkCanvas, mkRoleCanvas, canvasToString, increaseSize, increaseRoleCanvasSize, setRole } from './canvas.ts'
+import type { Canvas, AsciiConfig, RoleCanvas, CharRole, AsciiTheme, ColorMode, DrawingCoord } from './types.ts'
+import { mkCanvas, mkRoleCanvas, canvasToString, increaseSize, increaseRoleCanvasSize, setRole, drawText } from './canvas.ts'
 import { splitLines, maxLineWidth, lineCount } from './multiline-utils.ts'
+import { charWidth, stringWidth } from './char-width.ts'
 
 /** Classify a box-drawing character as 'border' or 'text'. */
 function classifyBoxChar(ch: string): CharRole {
@@ -45,6 +46,7 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
   const JB = useAscii ? '+' : '┴' // bottom junction on lifeline
   const JL = useAscii ? '+' : '├' // left junction
   const JR = useAscii ? '+' : '┤' // right junction
+  const SELF_MESSAGE_LOOP_W = 4
 
   // ---- LAYOUT: compute lifeline X positions ----
 
@@ -148,7 +150,7 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
         curY += 1
         const note = diagram.notes[n]!
         const nLines = splitLines(note.text)
-        const nWidth = Math.max(...nLines.map(l => l.length)) + 4
+        let nWidth = Math.max(...nLines.map(l => stringWidth(l))) + 4
         const nHeight = nLines.length + 2
 
         // Determine x position based on note.position
@@ -159,11 +161,29 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
         } else if (note.position === 'right') {
           nx = llX[aIdx]! + 2
         } else {
-          // 'over' — center over actor(s)
+          // 'over' — center over actor(s), align with first lifeline
           if (note.actorIds.length >= 2) {
             const aIdx2 = actorIdx.get(note.actorIds[1]!) ?? aIdx
-            nx = Math.floor((llX[aIdx]! + llX[aIdx2]!) / 2) - Math.floor(nWidth / 2)
+            // Center between first and last lifeline, but make sure it spans both
+            const firstX = llX[Math.min(aIdx, aIdx2)]!
+            const lastX = llX[Math.max(aIdx, aIdx2)]!
+            const midX = Math.floor((firstX + lastX) / 2)
+            nx = midX - Math.floor(nWidth / 2)
+            // Ensure note box covers both lifelines
+            // For 'over' spanning multiple actors, we need the box to cover from firstX to lastX
+            // Left edge at or before firstX, right edge at or after lastX
+            const targetLeft = firstX - 1
+            const targetRight = lastX + 2
+            nx = targetLeft
+            // nWidth must be at least targetRight - targetLeft, expand if needed
+            const minWidth = targetRight - targetLeft
+            if (nWidth < minWidth) {
+              nWidth = minWidth
+            }
+            // Debug note positioning
+
           } else {
+            // Single actor - center on its lifeline
             nx = llX[aIdx]! - Math.floor(nWidth / 2)
           }
         }
@@ -198,7 +218,7 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
     const msg = diagram.messages[m]!
     if (msg.from === msg.to) {
       const fi = actorIdx.get(msg.from)!
-      const selfRight = llX[fi]! + 6 + 2 + msg.label.length
+      const selfRight = llX[fi]! + SELF_MESSAGE_LOOP_W + 2 + stringWidth(msg.label)
       totalW = Math.max(totalW, selfRight + 1)
     }
   }
@@ -214,6 +234,20 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
     if (x >= 0 && x < canvas.length && y >= 0 && y < (canvas[0]?.length ?? 0)) {
       canvas[x]![y] = ch
       setRole(rc, x, y, role)
+    }
+  }
+
+  /** Draw text and keep roleCanvas in sync so labels don't inherit line colors. */
+  function drawRoleText(start: DrawingCoord, text: string, role: CharRole, forceOverwrite = true): void {
+    drawText(canvas, start, text, forceOverwrite)
+    let x = start.x
+    for (const ch of text) {
+      const width = charWidth(ch)
+      increaseRoleCanvasSize(rc, x + width - 1, start.y)
+      for (let dx = 0; dx < width; dx++) {
+        setRole(rc, x + dx, start.y, role)
+      }
+      x += width
     }
   }
 
@@ -238,10 +272,8 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
       setC(left + w - 1, row, V, 'border')
       // Center this line within the box
       const line = lines[i]!
-      const ls = left + 1 + boxPad + Math.floor((maxW - line.length) / 2)
-      for (let j = 0; j < line.length; j++) {
-        setC(ls + j, row, line[j]!, 'text')
-      }
+      const ls = left + 1 + boxPad + Math.floor((maxW - stringWidth(line)) / 2)
+      drawRoleText({ x: ls, y: row }, line, 'text')
     }
 
     // Bottom border
@@ -295,7 +327,7 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
       //   │  │ Label     (row 1)
       //   │◄─┘           (row 2)
       const y0 = msgArrowY[m]!
-      const loopW = Math.max(4, 4)
+      const loopW = SELF_MESSAGE_LOOP_W
 
       // Row 0: start junction + horizontal + top-right corner
       setC(fromX, y0, JL, 'junction')
@@ -305,9 +337,7 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
       // Row 1: vertical on right side + label
       setC(fromX + loopW, y0 + 1, V, 'line')
       const labelX = fromX + loopW + 2
-      for (let i = 0; i < msg.label.length; i++) {
-        if (labelX + i < totalW) setC(labelX + i, y0 + 1, msg.label[i]!, 'text')
-      }
+      drawRoleText({ x: labelX, y: y0 + 1 }, msg.label, 'text')
 
       // Row 2: arrow-back + horizontal + bottom-right corner
       const arrowChar = isFilled ? (useAscii ? '<' : '◀') : (useAscii ? '<' : '◁')
@@ -326,12 +356,9 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
 
       for (let lineIdx = 0; lineIdx < msgLines.length; lineIdx++) {
         const line = msgLines[lineIdx]!
-        const labelStart = midX - Math.floor(line.length / 2)
+        const labelStart = midX - Math.floor(stringWidth(line) / 2)
         const y = labelY + lineIdx
-        for (let i = 0; i < line.length; i++) {
-          const lx = labelStart + i
-          if (lx >= 0 && lx < totalW) setC(lx, y, line[i]!, 'text')
-        }
+        drawRoleText({ x: labelStart, y }, line, 'text')
       }
 
       // Draw arrow line
@@ -349,6 +376,9 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
   }
 
   // ---- DRAW: blocks (loop, alt, opt, par, etc.) ----
+  
+  // Pre-calculate lifeline positions for block border handling
+  const lifelineXs = new Set(llX)
 
   for (let b = 0; b < diagram.blocks.length; b++) {
     const block = diagram.blocks[b]!
@@ -356,24 +386,46 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
     const botY = blockEndY.get(b)
     if (topY === undefined || botY === undefined) continue
 
-    // Find the leftmost/rightmost lifelines involved in this block's messages
-    let minLX = totalW
-    let maxLX = 0
+    // Find the leftmost/rightmost content involved in this block's messages.
+    // Self-message loops extend to the right of their actor lifeline, so the
+    // block needs to enclose the loop itself, not just the actor column.
+    let minContentX = totalW
+    let maxContentX = 0
+    let sawContent = false
     for (let m = block.startIndex; m <= block.endIndex; m++) {
       if (m >= diagram.messages.length) break
       const msg = diagram.messages[m]!
       const f = actorIdx.get(msg.from) ?? 0
       const t = actorIdx.get(msg.to) ?? 0
-      minLX = Math.min(minLX, llX[Math.min(f, t)]!)
-      maxLX = Math.max(maxLX, llX[Math.max(f, t)]!)
+      const fromX = llX[f]!
+      const toX = llX[t]!
+      sawContent = true
+      minContentX = Math.min(minContentX, fromX, toX)
+      maxContentX = Math.max(
+        maxContentX,
+        fromX === toX
+          ? fromX + SELF_MESSAGE_LOOP_W + 2 + stringWidth(msg.label)
+          : Math.max(fromX, toX),
+      )
     }
 
-    const bLeft = Math.max(0, minLX - 4)
-    const bRight = Math.min(totalW - 1, maxLX + 4)
+    if (!sawContent) {
+      minContentX = llX[0] ?? 0
+      maxContentX = llX[llX.length - 1] ?? 0
+    }
+
+    const bLeft = Math.max(0, minContentX - 4)
+    const bRight = Math.min(totalW - 1, maxContentX + 4)
 
     // Top border with block type label
     setC(bLeft, topY, TL, 'border')
-    for (let x = bLeft + 1; x < bRight; x++) setC(x, topY, H, 'border')
+    for (let x = bLeft + 1; x < bRight; x++) {
+      if (lifelineXs.has(x) && !useAscii) {
+        setC(x, topY, '┬', 'junction')
+      } else {
+        setC(x, topY, H, 'border')
+      }
+    }
     setC(bRight, topY, TR, 'border')
     // Write block header label over the top border (supports multi-line)
     const hdrLabel = block.label ? `${block.type} [${block.label}]` : block.type
@@ -381,20 +433,30 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
 
     for (let lineIdx = 0; lineIdx < hdrLines.length && topY + lineIdx < botY; lineIdx++) {
       const line = hdrLines[lineIdx]!
-      for (let i = 0; i < line.length && bLeft + 1 + i < bRight; i++) {
-        setC(bLeft + 1 + i, topY + lineIdx, line[i]!, 'text')
-      }
+      drawRoleText({ x: bLeft + 1, y: topY + lineIdx }, line, 'text')
     }
 
     // Bottom border
     setC(bLeft, botY, BL, 'border')
-    for (let x = bLeft + 1; x < bRight; x++) setC(x, botY, H, 'border')
+    for (let x = bLeft + 1; x < bRight; x++) {
+      if (lifelineXs.has(x) && !useAscii) {
+        setC(x, botY, '┴', 'junction')
+      } else {
+        setC(x, botY, H, 'border')
+      }
+    }
     setC(bRight, botY, BR, 'border')
 
-    // Side borders
+    // Side borders - skip positions where there's a lifeline
     for (let y = topY + 1; y < botY; y++) {
-      setC(bLeft, y, V, 'border')
-      setC(bRight, y, V, 'border')
+      // Only draw left border if not a lifeline
+      if (!lifelineXs.has(bLeft)) {
+        setC(bLeft, y, V, 'border')
+      }
+      // Only draw right border if not a lifeline
+      if (!lifelineXs.has(bRight)) {
+        setC(bRight, y, V, 'border')
+      }
     }
 
     // Dividers
@@ -402,16 +464,26 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
       const dY = divYMap.get(`${b}:${d}`)
       if (dY === undefined) continue
       const dashChar = isDashedH()
-      setC(bLeft, dY, JL, 'junction')
-      for (let x = bLeft + 1; x < bRight; x++) setC(x, dY, dashChar, 'line')
-      setC(bRight, dY, JR, 'junction')
+      // Only draw junction if not on lifeline
+      if (!lifelineXs.has(bLeft)) {
+        setC(bLeft, dY, JL, 'junction')
+      }
+      for (let x = bLeft + 1; x < bRight; x++) {
+        // Use junction char where divider crosses lifeline
+        if (lifelineXs.has(x) && !useAscii) {
+          setC(x, dY, '┼', 'junction')
+        } else {
+          setC(x, dY, dashChar, 'line')
+        }
+      }
+      if (!lifelineXs.has(bRight)) {
+        setC(bRight, dY, JR, 'junction')
+      }
       // Divider label
       const dLabel = block.dividers[d]!.label
       if (dLabel) {
         const dStr = `[${dLabel}]`
-        for (let i = 0; i < dStr.length && bLeft + 1 + i < bRight; i++) {
-          setC(bLeft + 1 + i, dY, dStr[i]!, 'text')
-        }
+        drawRoleText({ x: bLeft + 1, y: dY }, dStr, 'text')
       }
     }
   }
@@ -422,24 +494,76 @@ export function renderSequenceAscii(text: string, config: AsciiConfig, colorMode
     // Ensure canvas is big enough
     increaseSize(canvas, np.x + np.width, np.y + np.height)
     increaseRoleCanvasSize(rc, np.x + np.width, np.y + np.height)
-    // Top border
-    setC(np.x, np.y, TL, 'border')
-    for (let x = 1; x < np.width - 1; x++) setC(np.x + x, np.y, H, 'border')
-    setC(np.x + np.width - 1, np.y, TR, 'border')
+    
+    // Find which lifelines are covered by this note
+    const coveredLifelines: number[] = []
+    for (let i = 0; i < diagram.actors.length; i++) {
+      const lx = llX[i]!
+      if (lx >= np.x && lx < np.x + np.width) {
+        coveredLifelines.push(lx)
+      }
+    }
+    
+    // Top border - use junction chars where lifelines intersect
+    // Check if corners are on lifelines
+    const leftCornerOnLifeline = coveredLifelines.includes(np.x)
+    const rightCornerOnLifeline = coveredLifelines.includes(np.x + np.width - 1)
+    
+    if (!leftCornerOnLifeline) {
+      setC(np.x, np.y, TL, 'border')
+    }
+    for (let x = 1; x < np.width - 1; x++) {
+      const absX = np.x + x
+      const hasLifeline = coveredLifelines.includes(absX)
+      const ch = hasLifeline && !useAscii ? '┼' : H
+      setC(absX, np.y, ch, 'junction')
+    }
+    if (!rightCornerOnLifeline) {
+      setC(np.x + np.width - 1, np.y, TR, 'border')
+    }
+    
     // Content rows
     for (let l = 0; l < np.lines.length; l++) {
       const ly = np.y + 1 + l
-      setC(np.x, ly, V, 'border')
-      setC(np.x + np.width - 1, ly, V, 'border')
-      for (let i = 0; i < np.lines[l]!.length; i++) {
-        setC(np.x + 2 + i, ly, np.lines[l]![i]!, 'text')
+      const lineText = np.lines[l] ?? ''
+      
+      // Left and right borders (skip lifeline positions, use ┼ for lifeline crossings)
+      for (let x = 0; x < np.width; x++) {
+        const absX = np.x + x
+        const isLifeline = coveredLifelines.includes(absX)
+        
+        if (x === 0 || x === np.width - 1) {
+          // Corner positions: border only if not lifeline
+          if (!isLifeline) {
+            setC(absX, ly, V, 'border')
+          }
+        } else if (isLifeline) {
+          // Lifeline crossing through note: show cross
+          if (!useAscii) {
+            setC(absX, ly, '┼', 'junction')
+          }
+        }
+      }
+      drawRoleText({ x: np.x + 2, y: ly }, lineText, 'text')
+    }
+    
+    // Bottom border - use junction chars where lifelines intersect
+    const by = np.y + np.height - 1
+    if (!leftCornerOnLifeline) {
+      setC(np.x, by, BL, 'border')
+    }
+    for (let x = 1; x < np.width - 1; x++) {
+      const absX = np.x + x
+      const hasLifeline = coveredLifelines.includes(absX)
+      if (hasLifeline && !useAscii) {
+        setC(absX, by, '┼', 'junction')
+      } else {
+        setC(absX, by, H, 'border')
       }
     }
-    // Bottom border
-    const by = np.y + np.height - 1
-    setC(np.x, by, BL, 'border')
-    for (let x = 1; x < np.width - 1; x++) setC(np.x + x, by, H, 'border')
-    setC(np.x + np.width - 1, by, BR, 'border')
+    if (!rightCornerOnLifeline) {
+      setC(np.x + np.width - 1, by, BR, 'border')
+    }
   }
 
   return canvasToString(canvas, { roleCanvas: rc, colorMode, theme })

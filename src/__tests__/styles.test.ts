@@ -29,9 +29,9 @@ describe('THEMES', () => {
 })
 
 describe('DEFAULTS', () => {
-  it('provides zinc-light bg/fg', () => {
-    expect(DEFAULTS.bg).toBe('#FFFFFF')
-    expect(DEFAULTS.fg).toBe('#27272A')
+  it('provides catppuccin-mocha bg/fg', () => {
+    expect(DEFAULTS.bg).toBe('#1e1e2e')
+    expect(DEFAULTS.fg).toBe('#cdd6f4')
   })
 })
 

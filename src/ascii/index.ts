@@ -1,5 +1,5 @@
 // ============================================================================
-// beautiful-mermaid — ASCII renderer public API
+// mdv — ASCII renderer public API
 //
 // Renders Mermaid diagrams to ASCII or Unicode box-drawing art.
 // No external dependencies — pure TypeScript.
@@ -12,7 +12,7 @@
 //   - ER diagrams (erDiagram) — grid layout with crow's foot notation
 //
 // Usage:
-//   import { renderMermaidASCII } from 'beautiful-mermaid'
+//   import { renderMermaidASCII } from 'mdv'
 //   const ascii = renderMermaidASCII('graph LR\n  A --> B')
 // ============================================================================
 

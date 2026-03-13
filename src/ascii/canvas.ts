@@ -8,6 +8,7 @@
 
 import type { Canvas, DrawingCoord, RoleCanvas, CharRole, AsciiTheme, ColorMode } from './types.ts'
 import { colorizeLine, DEFAULT_ASCII_THEME } from './ansi.ts'
+import { charWidth, WIDE_CHAR_PLACEHOLDER } from './char-width.ts'
 
 /**
  * Create a blank canvas filled with spaces.
@@ -243,18 +244,18 @@ export function mergeCanvases(
     for (let x = 0; x < overlay.length; x++) {
       for (let y = 0; y < overlay[0]!.length; y++) {
         const c = overlay[x]![y]!
-        if (c !== ' ') {
-          const mx = x + offset.x
-          const my = y + offset.y
-          const current = merged[mx]![my]!
-          if (!useAscii && isJunctionChar(c) && isJunctionChar(current)) {
-            merged[mx]![my] = mergeJunctions(current, c)
-          } else if (isAlphanumeric(current) && isAlphanumeric(c)) {
-            // Don't overwrite existing label text with new label text
-            // This prevents label collisions (first label wins)
-          } else {
-            merged[mx]![my] = c
-          }
+        if (c === ' ' || c === WIDE_CHAR_PLACEHOLDER) continue
+
+        const mx = x + offset.x
+        const my = y + offset.y
+        const current = getDisplayCharAt(merged, mx, my)
+        if (!useAscii && isJunctionChar(c) && isJunctionChar(current)) {
+          writeCanvasChar(merged, mx, my, mergeJunctions(current, c), true)
+        } else if (isAlphanumeric(current) && isAlphanumeric(c)) {
+          // Don't overwrite existing label text with new label text
+          // This prevents label collisions (first label wins)
+        } else {
+          writeCanvasChar(merged, mx, my, c, true)
         }
       }
     }
@@ -294,7 +295,9 @@ export function canvasToString(canvas: Canvas, options?: CanvasToStringOptions):
       // Plain text output — no colors
       let line = ''
       for (let x = 0; x <= maxX; x++) {
-        line += canvas[x]![y]!
+        const ch = canvas[x]![y]!
+        if (ch === WIDE_CHAR_PLACEHOLDER) continue
+        line += ch
       }
       lines.push(line)
     } else {
@@ -302,7 +305,9 @@ export function canvasToString(canvas: Canvas, options?: CanvasToStringOptions):
       const chars: string[] = []
       const roles: (CharRole | null)[] = []
       for (let x = 0; x <= maxX; x++) {
-        chars.push(canvas[x]![y]!)
+        const ch = canvas[x]![y]!
+        if (ch === WIDE_CHAR_PLACEHOLDER) continue
+        chars.push(ch)
         roles.push(roleCanvas[x]?.[y] ?? null)
       }
       lines.push(colorizeLine(chars, roles, theme, colorMode))
@@ -387,14 +392,68 @@ export function drawText(
   text: string,
   forceOverwrite = false
 ): void {
-  increaseSize(canvas, start.x + text.length, start.y)
-  for (let i = 0; i < text.length; i++) {
-    const x = start.x + i
-    const current = canvas[x]![start.y]!
-    // Only write if target is empty or we're forcing overwrite
-    if (forceOverwrite || current === ' ') {
-      canvas[x]![start.y] = text[i]!
+  let x = start.x
+  for (const ch of text) {
+    const width = charWidth(ch)
+    increaseSize(canvas, x + width - 1, start.y)
+    if (forceOverwrite || canWriteChar(canvas, x, start.y, width)) {
+      writeCanvasChar(canvas, x, start.y, ch, true)
     }
+    x += width
+  }
+}
+
+function canWriteChar(canvas: Canvas, x: number, y: number, width: number): boolean {
+  for (let dx = 0; dx < width; dx++) {
+    const current = canvas[x + dx]?.[y]
+    if (current !== ' ' && current !== undefined) return false
+  }
+  return true
+}
+
+function getDisplayCharAt(canvas: Canvas, x: number, y: number): string {
+  const current = canvas[x]?.[y] ?? ' '
+  if (current !== WIDE_CHAR_PLACEHOLDER) return current
+
+  const left = canvas[x - 1]?.[y] ?? ' '
+  return charWidth(left) === 2 ? left : ' '
+}
+
+function clearCanvasCell(canvas: Canvas, x: number, y: number): void {
+  const current = canvas[x]?.[y]
+  if (current === undefined || current === ' ') return
+
+  if (current === WIDE_CHAR_PLACEHOLDER) {
+    canvas[x]![y] = ' '
+    const left = canvas[x - 1]?.[y]
+    if (left !== undefined && left !== WIDE_CHAR_PLACEHOLDER && charWidth(left) === 2) {
+      canvas[x - 1]![y] = ' '
+    }
+    return
+  }
+
+  canvas[x]![y] = ' '
+  if (charWidth(current) === 2 && canvas[x + 1]?.[y] === WIDE_CHAR_PLACEHOLDER) {
+    canvas[x + 1]![y] = ' '
+  }
+}
+
+function writeCanvasChar(
+  canvas: Canvas,
+  x: number,
+  y: number,
+  ch: string,
+  forceOverwrite: boolean
+): void {
+  const width = charWidth(ch)
+  increaseSize(canvas, x + width - 1, y)
+  if (!forceOverwrite && !canWriteChar(canvas, x, y, width)) return
+
+  clearCanvasCell(canvas, x, y)
+  if (width === 2) clearCanvasCell(canvas, x + 1, y)
+  canvas[x]![y] = ch
+  if (width === 2) {
+    canvas[x + 1]![y] = WIDE_CHAR_PLACEHOLDER
   }
 }
 

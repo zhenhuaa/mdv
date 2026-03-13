@@ -1,90 +1,359 @@
-<div align="center">
+# mdv
 
-# beautiful-mermaid
+终端下浏览 Markdown 的工具，支持 Mermaid 渲染。
 
-**Render Mermaid diagrams as beautiful SVGs or ASCII art**
+`mdv` 是这个仓库的 CLI 名，也是现在的 npm 包名；底层同时提供 Mermaid 渲染库能力。
 
-Ultra-fast, fully themeable, zero DOM dependencies. Built for the AI era.
+它的核心使用场景很直接：
 
-![beautiful-mermaid sequence diagram example](hero.png)
+- 用 `mdv` 在终端里阅读 Markdown
+- 自动把 Markdown 里的 Mermaid 代码块渲染成终端可读的 ASCII / Unicode 图
+- 在需要时继续把同一套 Mermaid 能力用到 SVG、CLI、Web UI 或 AI 工具链里
 
-[![npm version](https://img.shields.io/npm/v/beautiful-mermaid.svg)](https://www.npmjs.com/package/beautiful-mermaid)
+![mdv sequence diagram example](hero.png)
+
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[**Live Demo & Samples**](https://agents.craft.do/mermaid)
+[GitHub Repository](https://github.com/zhenhuaa/mdc)
 
-**[→ Use it live in Craft Agents](https://agents.craft.do)**
+## 目录
 
-</div>
+- [CLI 快速开始](#cli-快速开始)
+- [CLI 命令说明](#cli-命令说明)
+- [Markdown 渲染范围](#markdown-渲染范围)
+- [Mermaid 支持](#mermaid-支持)
+- [作为库使用](#作为库使用)
+- [核心 API](#核心-api)
 
----
+## 这是什么
 
-## Why We Built This
+这个仓库提供两层能力：
 
-Diagrams are essential for AI-assisted programming. When you're working with an AI coding assistant, being able to visualize data flows, state machines, and system architecture—directly in your terminal or chat interface—makes complex concepts instantly graspable.
+1. `mdv` CLI：在终端里查看 Markdown，并把 Mermaid 代码块直接转换成终端图形。
+2. Mermaid 渲染库：把 Mermaid 渲染成 SVG 或 ASCII，方便在 Web、服务端、Agent、CLI 工具中复用。
 
-[Mermaid](https://mermaid.js.org/) is the de facto standard for text-based diagrams. It's brilliant. But the default renderer has problems:
+如果你的主要目标是“在终端里舒服地看文档”，先看下面的 CLI 部分；如果你要集成到代码里，再看后面的 API。
 
-- **Aesthetics** — Might be personal preference, but wished they looked more professional
-- **Complex theming** — Customizing colors requires wrestling with CSS classes
-- **No terminal output** — Can't render to ASCII for CLI tools
-- **Heavy dependencies** — Pulls in a lot of code for simple diagrams
+## 为什么把 CLI 放到第一位
 
-We built `beautiful-mermaid` at [Craft](https://craft.do) to power diagrams in [Craft Agents](https://agents.craft.do). It's fast, beautiful, and works everywhere—from rich UIs to plain terminals.
+大多数 Markdown 工具只解决“显示文本”，大多数 Mermaid 工具只解决“画图”，但不解决“在终端里读文档”：
 
+- Markdown 在终端里通常只剩纯文本
+- Mermaid 代码块会原样显示，阅读成本很高
+- `less` / `cat` 对表格、标题、引用块、代码块不够友好
+- 终端工作流、AI 编程工作流、SSH 环境都很需要一个纯终端方案
 
-The ASCII rendering engine is based on [mermaid-ascii](https://github.com/AlexanderGrooff/mermaid-ascii) by Alexander Grooff. We ported it from Go to TypeScript and extended it. Thank you Alexander for the excellent foundation! (And inspiration that this was possible.)
+`mdv` 的目标不是做一个通用浏览器，而是把 Markdown 文档的核心阅读体验补齐，尤其是 Mermaid。
 
-## Features
+## 特性
 
-- **6 diagram types** — Flowcharts, State, Sequence, Class, ER, and XY Charts (bar, line, combined)
-- **Dual output** — SVG for rich UIs, ASCII/Unicode for terminals
-- **Synchronous rendering** — No async, no flash. Works with React `useMemo()`
-- **15 built-in themes** — And dead simple to add your own
-- **Full Shiki compatibility** — Use any VS Code theme directly
-- **Live theme switching** — CSS custom properties, no re-render needed
-- **Mono mode** — Beautiful diagrams from just 2 colors
-- **Zero DOM dependencies** — Pure TypeScript, works everywhere
-- **Ultra-fast** — Renders 100+ diagrams in under 500ms
+- Markdown 终端阅读：标题、列表、引用、表格、代码块会做终端友好的排版
+- Mermaid 代码块渲染：自动将 ```` ```mermaid ```` 转成 ASCII / Unicode 图
+- 适合终端工作流：支持文件输入、标准输入、分页器
+- 样式可降级：可输出无 ANSI 样式的纯文本版本
+- 底层 Mermaid 渲染库：支持 SVG 和 ASCII 两种输出
+- 支持多种 Mermaid 图：Flowchart、State、Sequence、Class、ER、XY Chart
 
-## Installation
+## 安装
+
+### 作为 CLI 使用
+
+当前 CLI 入口是：
+
+- `mdv`
+
+CLI 文件使用 Bun 运行时执行，推荐这样安装和使用：
 
 ```bash
-npm install beautiful-mermaid
-# or
-bun add beautiful-mermaid
-# or
-pnpm add beautiful-mermaid
+bun install -g mdv
+mdv README.md
 ```
 
-## Quick Start
+也可以在项目内安装后通过本地二进制使用：
 
-### SVG Output
+```bash
+bun add mdv
+./node_modules/.bin/mdv README.md
+```
 
-```typescript
-import { renderMermaidSVG } from 'beautiful-mermaid'
+### 作为库使用
+
+如果你只是想把它当终端 Markdown 浏览器使用，看到这里其实就够了。下面这一段主要给代码集成场景。
+
+```bash
+npm install mdv
+# or
+bun add mdv
+# or
+pnpm add mdv
+```
+
+## CLI 快速开始
+
+最常见的使用方式只有四种：
+
+```bash
+# 直接查看一个 Markdown 文件
+mdv README.md
+
+# 通过 stdin 读取
+cat README.md | mdv -
+
+# 使用分页器查看长文档
+mdv --pager docs/architecture.md
+
+# 输出无 ANSI 样式版本，适合重定向、日志、CI
+mdv --no-style README.md
+```
+
+### CLI 做了什么
+
+当 `mdv` 读取 Markdown 时，会先做一层 Mermaid 预处理：
+
+1. 找出所有 ```` ```mermaid ```` 代码块
+2. 尝试把 Mermaid 源码渲染成终端 ASCII / Unicode 图
+3. 再把整个 Markdown 渲染成终端友好的文本样式
+
+如果某个 Mermaid 代码块渲染失败，会保留原始 Mermaid 代码块，不会直接吞掉内容。
+
+### 适合写进 README 的使用示例
+
+示例输入：
+
+````markdown
+# 发布流程
+
+```mermaid
+flowchart LR
+  Draft --> Review --> Release
+```
+````
+
+终端里会直接看到渲染后的流程图，而不是原始 Mermaid 源码。
+
+## CLI 命令说明
+
+### Synopsis
+
+```bash
+mdv [OPTIONS] [FILE]
+cat FILE | mdv -
+mdv themes
+mdv doctor
+```
+
+### Description
+
+`mdv` 会读取 Markdown，先把 Mermaid fenced code block 预处理成终端图，再输出带终端样式的阅读结果。
+
+如果输入来自文件，就读取 `[FILE]`；如果参数是 `-`，或者 stdin 被 pipe 进来，就从标准输入读取。
+
+### Options
+
+| 参数 | 说明 |
+| --- | --- |
+| `-n`, `--no-style` | 不输出 ANSI 样式；仍会把 Mermaid 转成 ```text 代码块，适合管道、日志、CI |
+| `--no-mdv` | `--no-style` 的兼容别名 |
+| `--no-glow` | 历史兼容别名，等价于 `--no-style` |
+| `--no-mermaid` | 不渲染 Mermaid 图，保留原始 ` ```mermaid ` fenced code block |
+| `--mermaid <render|source>` | 显式指定 Mermaid block 是渲染成图还是保留源码 |
+| `--theme <name>` | 使用内置主题，作用于 Markdown 样式、代码高亮和 Mermaid ASCII 颜色；默认 `catppuccin-mocha` |
+| `--list-themes` | 列出内置主题 |
+| `--preview` | 配合 `mdv themes` 预览各主题的标题、正文、链接和代码样式 |
+| `--color <auto|always|never>` | 控制 ANSI 颜色输出策略 |
+| `--no-color` | 等价于 `--color never` |
+| `doctor` | 输出当前 CLI 版本、主题、颜色模式、TTY 状态等诊断信息 |
+| `-v`, `--version` | 显示当前 CLI 版本 |
+| `-h`, `--help` | 显示帮助信息 |
+| `-` | 从标准输入读取 Markdown |
+
+### Built-in Themes
+
+可通过 `mdv themes`、`mdv --list-themes` 或 `mdv themes --preview` 查看当前支持的主题：
+
+- `zinc-light`
+- `zinc-dark`
+- `tokyo-night`
+- `tokyo-night-storm`
+- `tokyo-night-light`
+- `catppuccin-mocha`（默认）
+- `catppuccin-latte`
+- `nord`
+- `nord-light`
+- `dracula`
+- `github-light`
+- `github-dark`
+- `solarized-light`
+- `solarized-dark`
+- `one-dark`
+
+### Help 输出
+
+下面这段和当前 CLI 实现保持一致：
+
+```text
+mdv - terminal Markdown with Mermaid ASCII support
+
+Usage:
+  mdv [OPTIONS] [FILE]
+  cat FILE | mdv -
+  mdv themes
+  mdv doctor
+
+Options:
+  -n, --no-style    Output raw Markdown with Mermaid rendered as ```text blocks
+  --no-mermaid      Keep Mermaid fenced blocks as source instead of rendering
+  --mermaid MODE    Use render or source for Mermaid fenced blocks
+  --theme NAME      Use a built-in theme (default: catppuccin-mocha)
+  --list-themes     List built-in themes
+  --preview         Show theme previews with "mdv themes"
+  --color MODE      Use auto, always, or never for ANSI colors
+  --no-color        Disable ANSI colors
+  -v, --version     Show mdv version
+  -h, --help        Show this help message
+
+Examples:
+  mdv README.md
+  cat README.md | mdv -
+  mdv --theme dracula README.md
+  mdv themes --preview
+```
+
+### Examples
+
+```bash
+# 查看当前目录下的设计文档
+mdv docs/design.md
+
+# 查看 git 中某个版本的 README
+git show HEAD~1:README.md | mdv -
+
+# 查看生成后的 Markdown
+cat dist/release-notes.md | mdv -
+
+# 用 Dracula 主题阅读
+mdv --theme dracula docs/spec.md
+
+# 查看所有内置主题
+mdv themes
+
+# 预览所有主题
+mdv themes --preview
+
+# 强制输出颜色
+mdv --color always README.md
+
+# 保留 Mermaid 源码，不转成图
+mdv --no-mermaid README.md
+
+# 等价写法：显式指定 Mermaid 保留源码
+mdv --mermaid source README.md
+
+# 显式指定 Mermaid 渲染成图
+mdv --mermaid render README.md
+
+# 查看当前诊断信息
+mdv doctor
+
+# 查看版本
+mdv --version
+
+# 生成纯文本结果
+mdv -n docs/spec.md > /tmp/spec.txt
+```
+
+### Notes
+
+默认情况下，`mdv` 会把 Mermaid fenced code block 预处理成终端图；如果你只想看源码，可使用 `--no-mermaid` 或 `--mermaid source`。如果同时传了多个 Mermaid 模式参数，以最后一个为准。
+
+`--theme` 会统一影响终端 Markdown 标题/正文配色、Shiki 代码高亮，以及 Mermaid ASCII 图的颜色。
+
+`--color always` 适合把样式结果继续传给能保留 ANSI 的工具；`--color never` 适合日志、文件或不支持 ANSI 的环境。
+
+如果 Mermaid 图渲染失败，CLI 会在 stderr 输出 warning，并保留原始 ` ```mermaid ` 代码块，避免静默降级。
+
+### 什么时候用 `--no-style`
+
+下面这些场景建议用 `--no-style`：
+
+- 输出要继续被别的命令处理
+- 结果要写入文件
+- CI 日志不希望带 ANSI 控制字符
+- 终端颜色支持不稳定
+
+## Markdown 渲染范围
+
+`mdv` 当前重点覆盖的是“终端文档阅读高频元素”，不是完整浏览器级 Markdown 实现。已经支持的重点包括：
+
+- 标题
+- 段落
+- 有序 / 无序列表
+- 引用块
+- 表格
+- 围栏代码块
+- 行内代码、粗体、斜体、删除线、链接
+- Mermaid fenced code block
+
+这套范围适合 README、设计文档、技术说明、操作手册。
+
+## Mermaid 支持
+
+### 终端输出
+
+如果你只关心 CLI，这一段最重要：
+
+- Mermaid 会被渲染成 Unicode 终端图
+- Mermaid 渲染发生在 Markdown 渲染之前，因此文档上下文能保持连贯
+- 底层渲染库同时支持 ASCII / Unicode，两种输出模式都可以在代码集成里复用
+
+例如：
+
+```mermaid
+graph LR
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Action]
+  B -->|No| D[End]
+```
+
+会在终端里变成可直接阅读的文本图，而不是源码块。
+
+### 支持的图类型
+
+- Flowcharts
+- State diagrams
+- Sequence diagrams
+- Class diagrams
+- ER diagrams
+- XY charts
+
+## 作为库使用
+
+如果你不只是想看 Markdown，也可以把底层渲染能力直接集成进代码。
+
+### SVG 输出
+
+```ts
+import { renderMermaidSVG } from 'mdv'
 
 const svg = renderMermaidSVG(`
-  graph TD
-    A[Start] --> B{Decision}
-    B -->|Yes| C[Action]
-    B -->|No| D[End]
+graph TD
+  A[Start] --> B{Decision}
+  B -->|Yes| C[Action]
+  B -->|No| D[End]
 `)
 ```
 
-Rendering is **fully synchronous** — no `await`, no promises. The ELK.js layout engine runs synchronously via a FakeWorker bypass, so you get your SVG string instantly.
+### ASCII 输出
 
-Need async? Use `renderMermaidSVGAsync()` — same output, returns a `Promise<string>`.
-
-### ASCII Output
-
-```typescript
-import { renderMermaidASCII } from 'beautiful-mermaid'
+```ts
+import { renderMermaidASCII } from 'mdv'
 
 const ascii = renderMermaidASCII(`graph LR; A --> B --> C`)
 ```
 
-```
+示例输出：
+
+```text
 ┌───┐     ┌───┐     ┌───┐
 │   │     │   │     │   │
 │ A │────►│ B │────►│ C │
@@ -92,494 +361,43 @@ const ascii = renderMermaidASCII(`graph LR; A --> B --> C`)
 └───┘     └───┘     └───┘
 ```
 
----
-
-## React Integration
-
-Because rendering is synchronous, you can use `useMemo()` for zero-flash diagram rendering:
-
-```tsx
-import { renderMermaidSVG } from 'beautiful-mermaid'
-
-function MermaidDiagram({ code }: { code: string }) {
-  const { svg, error } = React.useMemo(() => {
-    try {
-      return {
-        svg: renderMermaidSVG(code, {
-          bg: 'var(--background)',
-          fg: 'var(--foreground)',
-          transparent: true,
-        }),
-        error: null,
-      }
-    } catch (err) {
-      return { svg: null, error: err instanceof Error ? err : new Error(String(err)) }
-    }
-  }, [code])
-
-  if (error) return <pre>{error.message}</pre>
-  return <div dangerouslySetInnerHTML={{ __html: svg! }} />
-}
-```
-
-**Why this works well:**
-- **No flash** — SVG is computed synchronously during render, not in a useEffect
-- **CSS variables** — Pass `var(--background)` etc. instead of hex colors. The SVG inherits from your app's CSS, so theme switches apply instantly without re-rendering
-- **Memoized** — Only re-renders when `code` changes
-
----
-
-## Theming
-
-The theming system is the heart of `beautiful-mermaid`. It's designed to be both powerful and dead simple.
-
-### The Two-Color Foundation
-
-Every diagram needs just two colors: **background** (`bg`) and **foreground** (`fg`). That's it. From these two colors, the entire diagram is derived using `color-mix()`:
-
-```typescript
-const svg = renderMermaidSVG(diagram, {
-  bg: '#1a1b26',  // Background
-  fg: '#a9b1d6',  // Foreground
-})
-```
-
-This is **Mono Mode**—a coherent, beautiful diagram from just two colors. The system automatically derives:
-
-| Element | Derivation |
-|---------|------------|
-| Text | `--fg` at 100% |
-| Secondary text | `--fg` at 60% into `--bg` |
-| Edge labels | `--fg` at 40% into `--bg` |
-| Faint text | `--fg` at 25% into `--bg` |
-| Connectors | `--fg` at 50% into `--bg` |
-| Arrow heads | `--fg` at 85% into `--bg` |
-| Node fill | `--fg` at 3% into `--bg` |
-| Group header | `--fg` at 5% into `--bg` |
-| Inner strokes | `--fg` at 12% into `--bg` |
-| Node stroke | `--fg` at 20% into `--bg` |
-
-### Enriched Mode
-
-For richer themes, you can provide optional "enrichment" colors that override specific derivations:
-
-```typescript
-const svg = renderMermaidSVG(diagram, {
-  bg: '#1a1b26',
-  fg: '#a9b1d6',
-  // Optional enrichment:
-  line: '#3d59a1',    // Edge/connector color
-  accent: '#7aa2f7',  // Arrow heads, highlights
-  muted: '#565f89',   // Secondary text, labels
-  surface: '#292e42', // Node fill tint
-  border: '#3d59a1',  // Node stroke
-})
-```
-
-If an enrichment color isn't provided, it falls back to the `color-mix()` derivation. This means you can provide just the colors you care about.
-
-### CSS Custom Properties = Live Switching
-
-All colors are CSS custom properties on the `<svg>` element. This means you can switch themes instantly without re-rendering:
-
-```javascript
-// Switch theme by updating CSS variables
-svg.style.setProperty('--bg', '#282a36')
-svg.style.setProperty('--fg', '#f8f8f2')
-// The entire diagram updates immediately
-```
-
-For React apps, pass CSS variable references instead of hex values:
-
-```typescript
-const svg = renderMermaidSVG(diagram, {
-  bg: 'var(--background)',
-  fg: 'var(--foreground)',
-  accent: 'var(--accent)',
-  transparent: true,
-})
-// Theme switches apply automatically via CSS cascade — no re-render needed
-```
-
-### Built-in Themes
-
-15 carefully curated themes ship out of the box:
-
-| Theme | Type | Background | Accent |
-|-------|------|------------|--------|
-| `zinc-light` | Light | `#FFFFFF` | Derived |
-| `zinc-dark` | Dark | `#18181B` | Derived |
-| `tokyo-night` | Dark | `#1a1b26` | `#7aa2f7` |
-| `tokyo-night-storm` | Dark | `#24283b` | `#7aa2f7` |
-| `tokyo-night-light` | Light | `#d5d6db` | `#34548a` |
-| `catppuccin-mocha` | Dark | `#1e1e2e` | `#cba6f7` |
-| `catppuccin-latte` | Light | `#eff1f5` | `#8839ef` |
-| `nord` | Dark | `#2e3440` | `#88c0d0` |
-| `nord-light` | Light | `#eceff4` | `#5e81ac` |
-| `dracula` | Dark | `#282a36` | `#bd93f9` |
-| `github-light` | Light | `#ffffff` | `#0969da` |
-| `github-dark` | Dark | `#0d1117` | `#4493f8` |
-| `solarized-light` | Light | `#fdf6e3` | `#268bd2` |
-| `solarized-dark` | Dark | `#002b36` | `#268bd2` |
-| `one-dark` | Dark | `#282c34` | `#c678dd` |
-
-```typescript
-import { renderMermaidSVG, THEMES } from 'beautiful-mermaid'
-
-const svg = renderMermaidSVG(diagram, THEMES['tokyo-night'])
-```
-
-### Adding Your Own Theme
-
-Creating a theme is trivial. At minimum, just provide `bg` and `fg`:
-
-```typescript
-const myTheme = {
-  bg: '#0f0f0f',
-  fg: '#e0e0e0',
-}
-
-const svg = renderMermaidSVG(diagram, myTheme)
-```
-
-Want richer colors? Add any of the optional enrichments:
-
-```typescript
-const myRichTheme = {
-  bg: '#0f0f0f',
-  fg: '#e0e0e0',
-  accent: '#ff6b6b',  // Pop of color for arrows
-  muted: '#666666',   // Subdued labels
-}
-```
-
-### Full Shiki Compatibility
-
-Use **any VS Code theme** directly via Shiki integration. This gives you access to hundreds of community themes:
-
-```typescript
-import { getSingletonHighlighter } from 'shiki'
-import { renderMermaidSVG, fromShikiTheme } from 'beautiful-mermaid'
-
-// Load any theme from Shiki's registry
-const highlighter = await getSingletonHighlighter({
-  themes: ['vitesse-dark', 'rose-pine', 'material-theme-darker']
-})
-
-// Extract diagram colors from the theme
-const colors = fromShikiTheme(highlighter.getTheme('vitesse-dark'))
-
-const svg = renderMermaidSVG(diagram, colors)
-```
-
-The `fromShikiTheme()` function intelligently maps VS Code editor colors to diagram roles:
-
-| Editor Color | Diagram Role |
-|--------------|--------------|
-| `editor.background` | `bg` |
-| `editor.foreground` | `fg` |
-| `editorLineNumber.foreground` | `line` |
-| `focusBorder` / keyword token | `accent` |
-| comment token | `muted` |
-| `editor.selectionBackground` | `surface` |
-| `editorWidget.border` | `border` |
-
----
-
-## Supported Diagrams
-
-### Flowcharts
-
-```
-graph TD
-  A[Start] --> B{Decision}
-  B -->|Yes| C[Process]
-  B -->|No| D[End]
-  C --> D
-```
-
-All directions supported: `TD` (top-down), `LR` (left-right), `BT` (bottom-top), `RL` (right-left).
-
-### State Diagrams
-
-```
-stateDiagram-v2
-  [*] --> Idle
-  Idle --> Processing: start
-  Processing --> Complete: done
-  Complete --> [*]
-```
-
-### Sequence Diagrams
-
-```
-sequenceDiagram
-  Alice->>Bob: Hello Bob!
-  Bob-->>Alice: Hi Alice!
-  Alice->>Bob: How are you?
-  Bob-->>Alice: Great, thanks!
-```
-
-### Class Diagrams
-
-```
-classDiagram
-  Animal <|-- Duck
-  Animal <|-- Fish
-  Animal: +int age
-  Animal: +String gender
-  Animal: +isMammal() bool
-  Duck: +String beakColor
-  Duck: +swim()
-  Duck: +quack()
-```
-
-### ER Diagrams
-
-```
-erDiagram
-  CUSTOMER ||--o{ ORDER : places
-  ORDER ||--|{ LINE_ITEM : contains
-  PRODUCT ||--o{ LINE_ITEM : "is in"
-```
-
-### Inline Edge Styling
-
-Use `linkStyle` to override edge colors and stroke widths — just like [Mermaid's linkStyle](https://mermaid.js.org/syntax/flowchart.html#styling-links):
-
-```
-graph TD
-  A --> B --> C
-  linkStyle 0 stroke:#ff0000,stroke-width:2px
-  linkStyle default stroke:#888888
-```
-
-|             Syntax              |                 Effect                 |
-| ------------------------------- | -------------------------------------- |
-| `linkStyle 0 stroke:#f00`       | Style a single edge by index (0-based) |
-| `linkStyle 0,2 stroke:#f00`     | Style multiple edges at once           |
-| `linkStyle default stroke:#888` | Default style applied to all edges     |
-
-Index-specific styles override the default. Supported properties: `stroke`, `stroke-width`.
-
-Works in both flowcharts and state diagrams.
-
-### XY Charts
-
-Bar charts, line charts, and combinations — using Mermaid's `xychart-beta` syntax.
-
-**Bar chart:**
-
-```
-xychart-beta
-    title "Monthly Revenue"
-    x-axis [Jan, Feb, Mar, Apr, May, Jun]
-    y-axis "Revenue ($K)" 0 --> 500
-    bar [180, 250, 310, 280, 350, 420]
-```
-
-**Line chart:**
-
-```
-xychart-beta
-    title "User Growth"
-    x-axis [Jan, Feb, Mar, Apr, May, Jun]
-    line [1200, 1800, 2500, 3100, 3800, 4500]
-```
-
-**Combined bar + line:**
-
-```
-xychart-beta
-    title "Sales with Trend"
-    x-axis [Jan, Feb, Mar, Apr, May, Jun]
-    bar [300, 380, 280, 450, 350, 520]
-    line [300, 330, 320, 353, 352, 395]
-```
-
-**Horizontal orientation:**
-
-```
-xychart-beta horizontal
-    title "Language Popularity"
-    x-axis [Python, JavaScript, Java, Go, Rust]
-    bar [30, 25, 20, 12, 8]
-```
-
-**Axis configuration:**
-
-- Categorical x-axis: `x-axis [A, B, C]`
-- Numeric x-axis range: `x-axis 0 --> 100`
-- Axis titles: `x-axis "Category" [A, B, C]`
-- Y-axis range: `y-axis "Score" 0 --> 100`
-
-**Multi-series:** Add multiple `bar` and/or `line` declarations. Each series gets a distinct color from a monochromatic palette derived from the theme's accent color.
-
-### XY Chart Styling
-
-The chart renderer follows a clean, minimal design philosophy inspired by Apple and Craft:
-
-- **Dot grid** — A subtle dot pattern fills the plot area instead of traditional solid grid lines
-- **Rounded bars** — All bar corners are rounded for a modern, polished look
-- **Smooth curves** — Line series use natural cubic spline interpolation, producing mathematically smooth curves through all data points (not straight segments or staircase steps)
-- **Floating labels** — No visible axis lines or tick marks; labels float freely for a clutter-free aesthetic
-- **Drop-shadow lines** — Each line series has a subtle shadow beneath it for depth
-- **Monochromatic palette** — Series 0 uses the theme's accent color; additional series get darker/lighter shades of the same hue with subtle hue drift, adapting automatically to light or dark backgrounds
-- **Interactive tooltips** — When rendered with `interactive: true`, hovering over bars or data points shows value tooltips. Multi-line tooltips appear when multiple series share an x-position
-- **Sparse line dots** — Lines with 12 or fewer data points show data point dots by default for readability
-- **Full theme support** — All 15 built-in themes (and custom themes) apply to charts. The accent color drives the entire series color palette
-- **Live theme switching** — Chart series colors are CSS custom properties (`--xychart-color-N`), so theme changes apply instantly without re-rendering
-
----
-
-## ASCII Output
-
-For terminal environments, CLI tools, or anywhere you need plain text, render to ASCII or Unicode box-drawing characters:
-
-```typescript
-import { renderMermaidASCII } from 'beautiful-mermaid'
-
-// Unicode mode (default) — prettier box drawing
-const unicode = renderMermaidASCII(`graph LR; A --> B`)
-
-// Pure ASCII mode — maximum compatibility
-const ascii = renderMermaidASCII(`graph LR; A --> B`, { useAscii: true })
-```
-
-**Unicode output:**
-```
-┌───┐     ┌───┐
-│   │     │   │
-│ A │────►│ B │
-│   │     │   │
-└───┘     └───┘
-```
-
-**ASCII output:**
-```
-+---+     +---+
-|   |     |   |
-| A |---->| B |
-|   |     |   |
-+---+     +---+
-```
-
-### ASCII Options
-
-```typescript
-renderMermaidASCII(diagram, {
-  useAscii: false,      // true = ASCII, false = Unicode (default)
-  paddingX: 5,          // Horizontal spacing between nodes
-  paddingY: 5,          // Vertical spacing between nodes
-  boxBorderPadding: 1,  // Padding inside node boxes
-  colorMode: 'auto',    // 'none' | 'auto' | 'ansi16' | 'ansi256' | 'truecolor' | 'html'
-  theme: { ... },       // Partial<AsciiTheme> — override default colors
-})
-```
-
-### ASCII XY Charts
-
-XY charts render to ASCII with dedicated chart-drawing characters:
-
-- **Bar charts** — `█` blocks (Unicode) or `#` (ASCII mode)
-- **Line charts** — Staircase routing with rounded corners: `╭╮╰╯│─` (Unicode) or `+|-` (ASCII)
-- **Multi-series** — Each series gets a distinct ANSI color from the theme's accent palette
-- **Legends** — Automatically shown when multiple series are present
-- **Horizontal charts** — Fully supported with categories on the y-axis
-
----
-
-## API Reference
+## 核心 API
 
 ### `renderMermaidSVG(text, options?): string`
 
-Render a Mermaid diagram to SVG. Synchronous. Auto-detects diagram type.
-
-**Parameters:**
-- `text` — Mermaid source code
-- `options` — Optional `RenderOptions` object
-
-**RenderOptions:**
-
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `bg` | `string` | `#FFFFFF` | Background color (or CSS variable) |
-| `fg` | `string` | `#27272A` | Foreground color (or CSS variable) |
-| `line` | `string?` | — | Edge/connector color |
-| `accent` | `string?` | — | Arrow heads, highlights |
-| `muted` | `string?` | — | Secondary text, labels |
-| `surface` | `string?` | — | Node fill tint |
-| `border` | `string?` | — | Node stroke color |
-| `font` | `string` | `Inter` | Font family |
-| `transparent` | `boolean` | `false` | Render with transparent background |
-| `padding` | `number` | `40` | Canvas padding in px |
-| `nodeSpacing` | `number` | `24` | Horizontal spacing between sibling nodes |
-| `layerSpacing` | `number` | `40` | Vertical spacing between layers |
-| `componentSpacing` | `number` | `24` | Spacing between disconnected components |
-| `thoroughness` | `number` | `3` | Crossing minimization trials (1-7, higher = better but slower) |
-| `interactive` | `boolean` | `false` | Enable hover tooltips on XY chart bars and data points |
-
-**XY Charts:** Diagrams starting with `xychart-beta` are auto-detected — no separate function needed. The `accent` color option drives the chart series color palette.
+同步渲染 Mermaid 到 SVG。
 
 ### `renderMermaidSVGAsync(text, options?): Promise<string>`
 
-Async version of `renderMermaidSVG()`. Same output, returns a `Promise<string>`. Useful in async server handlers or data loaders.
+异步版本，适合服务端 handler 或异步数据流。
 
 ### `renderMermaidASCII(text, options?): string`
 
-Render a Mermaid diagram to ASCII/Unicode text. Synchronous.
+同步渲染 Mermaid 到 ASCII / Unicode 文本。
 
-**AsciiRenderOptions:**
+常用选项：
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `useAscii` | `boolean` | `false` | Use ASCII instead of Unicode |
-| `paddingX` | `number` | `5` | Horizontal node spacing |
-| `paddingY` | `number` | `5` | Vertical node spacing |
-| `boxBorderPadding` | `number` | `1` | Inner box padding |
-| `colorMode` | `string` | `'auto'` | `'none'`, `'auto'`, `'ansi16'`, `'ansi256'`, `'truecolor'`, or `'html'` |
-| `theme` | `Partial<AsciiTheme>` | — | Override default colors for ASCII output |
+| 选项 | 默认值 | 说明 |
+| --- | --- | --- |
+| `useAscii` | `false` | `true` 时使用纯 ASCII，默认使用 Unicode 线框字符 |
+| `paddingX` | `5` | 节点间横向间距 |
+| `paddingY` | `5` | 节点间纵向间距 |
+| `boxBorderPadding` | `1` | 节点内部边距 |
+| `colorMode` | `'auto'` | 可选 `none`、`auto`、`ansi16`、`ansi256`、`truecolor`、`html` |
+| `theme` | - | 覆盖 ASCII 输出颜色主题 |
 
-### `parseMermaid(text): MermaidGraph`
+### `THEMES`
 
-Parse Mermaid source into a structured graph object (for custom processing).
+内置主题集合，可直接用于 SVG 渲染。
 
-### `fromShikiTheme(theme): DiagramColors`
+### `fromShikiTheme(theme)`
 
-Extract diagram colors from a Shiki theme object.
+从 Shiki 主题提取 Mermaid 配色。
 
-### `THEMES: Record<string, DiagramColors>`
+## 致谢
 
-Object containing all 15 built-in themes.
-
-### `DEFAULTS: { bg: string, fg: string }`
-
-Default colors (`#FFFFFF` / `#27272A`).
-
----
-
-## Attribution
-
-The ASCII rendering engine is based on [mermaid-ascii](https://github.com/AlexanderGrooff/mermaid-ascii) by Alexander Grooff. We ported it from Go to TypeScript and extended it with:
-
-- Sequence diagram support
-- Class diagram support
-- ER diagram support
-- Unicode box-drawing characters
-- Configurable spacing and padding
-
-Thank you Alexander for the excellent foundation!
-
----
+ASCII 渲染引擎基于 [mermaid-ascii](https://github.com/AlexanderGrooff/mermaid-ascii) by Alexander Grooff。我们将其从 Go 移植到 TypeScript，并扩展了更多图类型和终端场景支持。
 
 ## License
 
-MIT — see [LICENSE](LICENSE) for details.
-
----
-
-<div align="center">
-
-Built with care by the team at [Craft](https://craft.do)
-
-</div>
+MIT，见 [LICENSE](LICENSE)。

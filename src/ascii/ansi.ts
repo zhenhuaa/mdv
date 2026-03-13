@@ -21,12 +21,14 @@ declare const document: unknown
  * Uses the same mixing ratios to maintain visual consistency.
  */
 export const DEFAULT_ASCII_THEME: AsciiTheme = {
-  fg: '#27272a',      // zinc-800 — primary text
-  border: '#a1a1aa',  // zinc-400 — node borders (12% mix)
-  line: '#71717a',    // zinc-500 — edge lines (35% mix)
-  arrow: '#52525b',   // zinc-600 — arrowheads (60% mix)
-  corner: '#71717a',  // same as line
-  junction: '#a1a1aa', // same as border
+  fg: '#cdd6f4',       // catppuccin mocha text
+  border: '#404356',   // text mixed into bg at 20%
+  line: '#75798d',     // text mixed into bg at 50%
+  arrow: '#b3bbd9',    // text mixed into bg at 85%
+  accent: '#cba6f7',   // catppuccin mocha mauve
+  bg: '#1e1e2e',       // catppuccin mocha base
+  corner: '#75798d',   // same as line
+  junction: '#404356', // same as border
 }
 
 // ============================================================================
@@ -86,13 +88,28 @@ export function detectColorMode(): ColorMode {
   const proc = (globalThis as { process?: { stdout?: { isTTY?: boolean }, env?: Record<string, string | undefined> } }).process
 
   if (proc) {
+    const env = proc.env ?? {}
+    const noColor = env.NO_COLOR
+    if (typeof noColor === 'string' && noColor.length > 0) {
+      return 'none'
+    }
+
+    const forceColor = env.FORCE_COLOR?.toLowerCase()
+    if (forceColor === '0' || forceColor === 'false') {
+      return 'none'
+    }
+
     // Check if stdout is a TTY (not piped/redirected)
     if (!proc.stdout?.isTTY) {
       return 'none'
     }
 
-    const colorTerm = proc.env?.COLORTERM?.toLowerCase() ?? ''
-    const term = proc.env?.TERM?.toLowerCase() ?? ''
+    const colorTerm = env.COLORTERM?.toLowerCase() ?? ''
+    const term = env.TERM?.toLowerCase() ?? ''
+
+    if (forceColor === '3') return 'truecolor'
+    if (forceColor === '2') return 'ansi256'
+    if (forceColor === '1' || forceColor === 'true') return 'ansi16'
 
     // True color support
     if (colorTerm === 'truecolor' || colorTerm === '24bit') {

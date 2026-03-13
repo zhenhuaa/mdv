@@ -1,11 +1,14 @@
 {
-  "name": "beautiful-mermaid",
+  "name": "mdv",
   "version": "1.1.3",
   "license": "MIT",
-  "description": "Render Mermaid diagrams as beautiful SVGs or ASCII art. Ultra-fast, fully themeable, zero DOM dependencies.",
+  "description": "Terminal Markdown browser with Mermaid rendering, plus a Mermaid SVG/ASCII rendering library.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "bin": {
+    "mdv": "./src/mdv.ts"
+  },
   "exports": {
     ".": {
       "bun": "./src/index.ts",
@@ -15,13 +18,20 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/lukilabs/beautiful-mermaid"
+    "url": "https://github.com/zhenhuaa/mdc.git"
   },
-  "homepage": "https://github.com/lukilabs/beautiful-mermaid",
+  "homepage": "https://github.com/zhenhuaa/mdc",
   "bugs": {
-    "url": "https://github.com/lukilabs/beautiful-mermaid/issues"
+    "url": "https://github.com/zhenhuaa/mdc/issues"
   },
   "keywords": [
+    "markdown",
+    "markdown-viewer",
+    "markdown-browser",
+    "terminal",
+    "terminal-markdown",
+    "cli",
+    "mdv",
     "mermaid",
     "diagram",
     "svg",
@@ -35,7 +45,7 @@
     "visualization",
     "theming"
   ],
-  "author": "Craft Docs",
+  "author": "zhenhuaa",
   "files": ["src/", "dist/", "LICENSE", "README.md"],
   "scripts": {
     "test": "bun test src/__tests__/",
@@ -44,7 +54,7 @@
     "bench": "bun run bench.ts",
     "build": "tsup",
     "build:samples": "bun run index.ts && mkdir -p site && mv index.html site/ && cp -r public/* site/",
-    "deploy": "bun run build:samples && wrangler pages deploy site --project-name craft-agents-mermaid",
+    "deploy": "bun run build:samples && wrangler pages deploy site --project-name mdv",
     "xychart-test": "bun run xychart-test.ts",
     "prepublishOnly": "npm run build"
   },

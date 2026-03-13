@@ -47,10 +47,10 @@ export interface DiagramColors {
 // Defaults
 // ============================================================================
 
-/** Default bg/fg when no colors are provided (zinc light) */
+/** Default bg/fg when no colors are provided (Catppuccin Mocha) */
 export const DEFAULTS: Readonly<{ bg: string; fg: string }> = {
-  bg: '#FFFFFF',
-  fg: '#27272A',
+  bg: '#1e1e2e',
+  fg: '#cdd6f4',
 } as const
 
 // ============================================================================
@@ -192,7 +192,7 @@ interface ShikiThemeLike {
  * @example
  * ```ts
  * import { getSingletonHighlighter } from 'shiki'
- * import { fromShikiTheme } from 'beautiful-mermaid'
+ * import { fromShikiTheme } from 'mdv'
  *
  * const hl = await getSingletonHighlighter({ themes: ['tokyo-night'] })
  * const colors = fromShikiTheme(hl.getTheme('tokyo-night'))

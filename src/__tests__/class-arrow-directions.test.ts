@@ -10,6 +10,8 @@
 import { describe, test, expect } from 'bun:test'
 import { renderMermaidAscii } from '../ascii/index.ts'
 
+const noColor = { colorMode: 'none' as const }
+
 describe('Class Diagram Arrow Directions', () => {
 
   // ============================================================================
@@ -20,7 +22,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('parent above child - triangle points UP toward parent', () => {
       const diagram = `classDiagram
         Animal <|-- Dog`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Should contain upward triangle
       expect(result).toContain('△')
@@ -38,7 +40,7 @@ describe('Class Diagram Arrow Directions', () => {
         Animal <|-- Dog
         Animal <|-- Cat
         Dog <|-- Puppy`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Animal should be at top, then Dog/Cat, then Puppy
       const lines = result.split('\n')
@@ -56,7 +58,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Animal <|-- Mammal
         Mammal <|-- Dog`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Verify ordering: Animal > Mammal > Dog (top to bottom)
       const lines = result.split('\n')
@@ -75,7 +77,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Animal <|-- Dog
         Animal <|-- Cat`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Animal should be above both children
       const lines = result.split('\n')
@@ -93,7 +95,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('ASCII mode uses ^ for upward triangle', () => {
       const diagram = `classDiagram
         Animal <|-- Dog`
-      const result = renderMermaidAscii(diagram, { useAscii: true })
+      const result = renderMermaidAscii(diagram, { useAscii: true, ...noColor })
 
       expect(result).toContain('^')
       expect(result).not.toContain('v')
@@ -108,7 +110,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('source above target - arrow points DOWN', () => {
       const diagram = `classDiagram
         Person --> Address`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Should contain downward arrow
       expect(result).toContain('▼')
@@ -125,7 +127,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Person --> Address
         Person --> Phone`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Person should be above both targets
       const lines = result.split('\n')
@@ -141,7 +143,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         A --> B
         B --> C`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // A > B > C ordering
       const lines = result.split('\n')
@@ -159,7 +161,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('ASCII mode uses v for downward arrow', () => {
       const diagram = `classDiagram
         Person --> Address`
-      const result = renderMermaidAscii(diagram, { useAscii: true })
+      const result = renderMermaidAscii(diagram, { useAscii: true, ...noColor })
 
       expect(result).toContain('v')
       expect(result).not.toContain('^')
@@ -174,7 +176,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('source above target - arrow points DOWN', () => {
       const diagram = `classDiagram
         Client ..> Server`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       expect(result).toContain('▼')
       expect(result).not.toContain('▲')
@@ -189,7 +191,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Client ..> Server
         Client ..> Database`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       const lines = result.split('\n')
       const clientLine = lines.findIndex(l => l.includes('Client'))
@@ -203,7 +205,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('ASCII mode uses v for downward arrow', () => {
       const diagram = `classDiagram
         Client ..> Server`
-      const result = renderMermaidAscii(diagram, { useAscii: true })
+      const result = renderMermaidAscii(diagram, { useAscii: true, ...noColor })
 
       expect(result).toContain('v')
     })
@@ -219,7 +221,7 @@ describe('Class Diagram Arrow Directions', () => {
       // Shape (interface/parent) should be placed ABOVE Circle (implementation/child)
       const diagram = `classDiagram
         Circle ..|> Shape`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Shape (interface) should be above Circle (implementation)
       const lines = result.split('\n')
@@ -233,7 +235,7 @@ describe('Class Diagram Arrow Directions', () => {
       // Shape <|.. Circle means "Circle implements Shape" (same as Circle ..|> Shape)
       const diagram = `classDiagram
         Shape <|.. Circle`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Shape (interface) should be above Circle (implementation)
       const lines = result.split('\n')
@@ -248,7 +250,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Circle ..|> Shape
         Square ..|> Shape`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Shape (interface) above both implementations
       const lines = result.split('\n')
@@ -271,7 +273,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('composition - diamond is omnidirectional', () => {
       const diagram = `classDiagram
         Car *-- Engine`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Should contain filled diamond
       expect(result).toContain('◆')
@@ -280,7 +282,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('aggregation - hollow diamond is omnidirectional', () => {
       const diagram = `classDiagram
         Team o-- Player`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Should contain hollow diamond
       expect(result).toContain('◇')
@@ -300,7 +302,7 @@ describe('Class Diagram Arrow Directions', () => {
         G --> H : association
         I ..> J : dependency
         K ..|> L : realization`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Upward triangles for inheritance and realization
       expect(result.match(/△/g)?.length).toBe(2)
@@ -317,7 +319,7 @@ describe('Class Diagram Arrow Directions', () => {
       const diagram = `classDiagram
         Animal <|-- Dog
         Dog --> Food`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Should have both up triangle (inheritance) and down arrow (association)
       expect(result).toContain('△')
@@ -329,7 +331,7 @@ describe('Class Diagram Arrow Directions', () => {
         A --> B
         B --> C
         C ..> A`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       // Cycles may create mixed arrow directions (up and down) to avoid overlaps
       // Just verify arrows are present and classes are rendered
@@ -352,8 +354,8 @@ describe('Class Diagram Arrow Directions', () => {
         Animal <|-- Dog
         Person --> Address`
 
-      const unicode = renderMermaidAscii(diagram)
-      const ascii = renderMermaidAscii(diagram, { useAscii: true })
+      const unicode = renderMermaidAscii(diagram, noColor)
+      const ascii = renderMermaidAscii(diagram, { useAscii: true, ...noColor })
 
       // Both should have same node ordering
       const unicodeLines = unicode.split('\n')
@@ -383,7 +385,7 @@ describe('Class Diagram Arrow Directions', () => {
     test('single inheritance relationship', () => {
       const diagram = `classDiagram
         A <|-- B`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       expect(result).toContain('△')
       const lines = result.split('\n')
@@ -402,7 +404,7 @@ describe('Class Diagram Arrow Directions', () => {
           +bark() void
         }
         Animal <|-- Dog`
-      const result = renderMermaidAscii(diagram)
+      const result = renderMermaidAscii(diagram, noColor)
 
       expect(result).toContain('△')
       const lines = result.split('\n')

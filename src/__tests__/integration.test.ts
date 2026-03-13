@@ -46,9 +46,10 @@ describe('renderMermaidSVG – options', () => {
     expect(svg).toContain('--bg:#18181B')
   })
 
-  it('applies default light colors', () => {
+  it('applies catppuccin mocha default colors', () => {
     const svg = renderMermaidSVG('graph TD\n  A --> B')
-    expect(svg).toContain('--bg:#FFFFFF')
+    expect(svg).toContain('--bg:#1e1e2e')
+    expect(svg).toContain('--fg:#cdd6f4')
   })
 
   it('applies custom font', () => {
