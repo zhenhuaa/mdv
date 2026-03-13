@@ -3,6 +3,7 @@
 import { readFile } from 'node:fs/promises'
 import process from 'node:process'
 import { resolve as resolvePath } from 'node:path'
+import { realpathSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { createRequire } from 'node:module'
 import { createHighlighter } from 'shiki'
@@ -1174,7 +1175,11 @@ export async function runMdvCli(argv = process.argv.slice(2)): Promise<number> {
 const isMain = (() => {
   const entry = process.argv[1]
   if (!entry) return false
-  return fileURLToPath(import.meta.url) === resolvePath(entry)
+  try {
+    return realpathSync(fileURLToPath(import.meta.url)) === realpathSync(resolvePath(entry))
+  } catch {
+    return fileURLToPath(import.meta.url) === resolvePath(entry)
+  }
 })()
 
 if (isMain) {
