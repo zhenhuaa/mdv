@@ -1,7 +1,7 @@
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import { stringWidth } from '../ascii/char-width.ts'
 import { preprocessMermaidBlocks, renderMarkdownToTerminal, parseGlowmArgs, parseMdvArgs, runGlowmCli, runMdvCli } from '../mdv.ts'
 

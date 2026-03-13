@@ -7,7 +7,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "mdv": "./src/mdv.ts"
+    "mdv": "./dist/mdv.js"
   },
   "exports": {
     ".": {
@@ -18,11 +18,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhenhuaa/mdc.git"
+    "url": "https://github.com/zhenhuaa/mdv.git"
   },
-  "homepage": "https://github.com/zhenhuaa/mdc",
+  "homepage": "https://github.com/zhenhuaa/mdv",
   "bugs": {
-    "url": "https://github.com/zhenhuaa/mdc/issues"
+    "url": "https://github.com/zhenhuaa/mdv/issues"
   },
   "keywords": [
     "markdown",
@@ -46,9 +46,13 @@
     "theming"
   ],
   "author": "zhenhuaa",
-  "files": ["src/", "dist/", "LICENSE", "README.md"],
+  "files": [
+    "dist/",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "test": "bun test src/__tests__/",
+    "test": "vitest run",
     "samples": "bun run index.ts",
     "dev": "bun run dev.ts",
     "bench": "bun run bench.ts",
@@ -66,6 +70,7 @@
     "@types/bun": "^1.3.9",
     "shiki": "^3.19.0",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.0"
   }
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'bun:test'
+import { describe, expect, it } from 'vitest'
 import { renderMermaidASCII } from '../ascii/index.ts'
 import { stringWidth } from '../ascii/char-width.ts'
 

@@ -14,7 +14,7 @@
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[GitHub Repository](https://github.com/zhenhuaa/mdc)
+[GitHub Repository](https://github.com/zhenhuaa/mdv)
 
 ## 目录
 
@@ -62,17 +62,17 @@
 
 - `mdv`
 
-CLI 文件使用 Bun 运行时执行，推荐这样安装和使用：
+CLI 支持标准 Node 安装和执行，推荐这样安装和使用：
 
 ```bash
-bun install -g mdv
+npm install -g mdv
 mdv README.md
 ```
 
 也可以在项目内安装后通过本地二进制使用：
 
 ```bash
-bun add mdv
+npm install mdv
 ./node_modules/.bin/mdv README.md
 ```
 

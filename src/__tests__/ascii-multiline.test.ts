@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect } from 'vitest'
 import { renderMermaidAscii } from '../ascii/index.ts'
 import { mkCanvas, drawText, canvasToString } from '../ascii/canvas.ts'
 import { stringWidth } from '../ascii/char-width.ts'

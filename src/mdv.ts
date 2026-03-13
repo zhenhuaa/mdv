@@ -1,4 +1,4 @@
-#!/usr/bin/env bun
+#!/usr/bin/env node
 
 import { readFile } from 'node:fs/promises'
 import process from 'node:process'
@@ -95,14 +95,18 @@ function buildCliColors(colors: DiagramColors) {
   } as const
 }
 
+function getThemeColors(themeName: ThemeName): DiagramColors {
+  return THEMES[themeName] ?? THEMES[DEFAULT_THEME_NAME]!
+}
+
 function setCliTheme(themeName: ThemeName): void {
   currentThemeName = themeName
-  cliColors = buildCliColors(THEMES[themeName])
+  cliColors = buildCliColors(getThemeColors(themeName))
 }
 
 let highlighterPromise: Promise<Highlighter> | null = null
 let currentThemeName: ThemeName = DEFAULT_THEME_NAME
-let cliColors = buildCliColors(THEMES[DEFAULT_THEME_NAME])
+let cliColors = buildCliColors(getThemeColors(DEFAULT_THEME_NAME))
 
 type CliColorMode = 'auto' | 'always' | 'never'
 type CliHyperlinkMode = 'auto' | 'always' | 'never'
@@ -421,7 +425,7 @@ function isNumericCell(text: string): boolean {
 
 function blockquoteDepth(line: string): number {
   const match = line.match(/^(\s*(?:>\s*)+)/)
-  return match ? (match[1].match(/>/g)?.length ?? 0) : 0
+  return match?.[1]?.match(/>/g)?.length ?? 0
 }
 
 function parseTaskMarker(text: string): { checked: boolean; body: string } | null {
@@ -560,7 +564,7 @@ function renderTable(lines: string[], useColor: boolean, maxWidth: number): stri
       }
     }
     if (targetIdx === -1) break
-    widths[targetIdx] -= 1
+    widths[targetIdx]! -= 1
     truncated = true
   }
 
@@ -711,7 +715,7 @@ export function preprocessMermaidBlocks(
     try {
       rendered = renderMermaidASCII(mermaidText.trim(), {
         colorMode: options.colorMode ?? 'none',
-        theme: diagramColorsToAsciiTheme(THEMES[options.theme ?? currentThemeName]),
+        theme: diagramColorsToAsciiTheme(getThemeColors(options.theme ?? currentThemeName)),
       })
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error)
@@ -1024,7 +1028,7 @@ function renderThemePreview(name: ThemeName, useColor: boolean): string {
   const title = name === DEFAULT_THEME_NAME ? `${name} (default)` : name
   const graph = renderMermaidASCII('graph LR\n  A --> B', {
     colorMode: useColor ? 'truecolor' : 'none',
-    theme: diagramColorsToAsciiTheme(THEMES[name]),
+    theme: diagramColorsToAsciiTheme(getThemeColors(name)),
   })
   const sample = [
     renderHeading(`# ${title}`, 48, useColor),

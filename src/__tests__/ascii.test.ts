@@ -7,11 +7,12 @@
  *
  * Test data: 44 ASCII files + 22 Unicode files = 66 total.
  */
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect } from 'vitest'
 import { renderMermaidAscii } from '../ascii/index.ts'
 import { hasDiagonalLines, DIAGONAL_CHARS } from '../ascii/validate.ts'
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
 // ============================================================================
 // Test case parser — matches Go's testutil.ReadTestCase format
@@ -153,7 +154,7 @@ function runGoldenTests(dir: string, useAscii: boolean): void {
 // Test suites
 // ============================================================================
 
-const testdataDir = join(import.meta.dir, 'testdata')
+const testdataDir = join(fileURLToPath(new URL('.', import.meta.url)), 'testdata')
 
 describe('ASCII rendering', () => {
   runGoldenTests(join(testdataDir, 'ascii'), true)
