@@ -2,7 +2,7 @@
 
 终端下浏览 Markdown 的工具，支持 Mermaid 渲染。
 
-`mdv` 是这个仓库的 CLI 名，也是现在的 npm 包名；底层同时提供 Mermaid 渲染库能力。
+`mdv` 是这个仓库的 CLI 名；npm 包名为 `@zhenhuaa/mdv`，底层同时提供 Mermaid 渲染库能力。
 
 它的核心使用场景很直接：
 
@@ -65,14 +65,14 @@
 CLI 支持标准 Node 安装和执行，推荐这样安装和使用：
 
 ```bash
-npm install -g mdv
+npm install -g @zhenhuaa/mdv
 mdv README.md
 ```
 
 也可以在项目内安装后通过本地二进制使用：
 
 ```bash
-npm install mdv
+npm install @zhenhuaa/mdv
 ./node_modules/.bin/mdv README.md
 ```
 
@@ -81,11 +81,11 @@ npm install mdv
 如果你只是想把它当终端 Markdown 浏览器使用，看到这里其实就够了。下面这一段主要给代码集成场景。
 
 ```bash
-npm install mdv
+npm install @zhenhuaa/mdv
 # or
-bun add mdv
+bun add @zhenhuaa/mdv
 # or
-pnpm add mdv
+pnpm add @zhenhuaa/mdv
 ```
 
 ## CLI 快速开始
@@ -333,7 +333,7 @@ graph LR
 ### SVG 输出
 
 ```ts
-import { renderMermaidSVG } from 'mdv'
+import { renderMermaidSVG } from '@zhenhuaa/mdv'
 
 const svg = renderMermaidSVG(`
 graph TD
@@ -346,7 +346,7 @@ graph TD
 ### ASCII 输出
 
 ```ts
-import { renderMermaidASCII } from 'mdv'
+import { renderMermaidASCII } from '@zhenhuaa/mdv'
 
 const ascii = renderMermaidASCII(`graph LR; A --> B --> C`)
 ```

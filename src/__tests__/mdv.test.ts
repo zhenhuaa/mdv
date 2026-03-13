@@ -1,9 +1,13 @@
 import { mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 import { stringWidth } from '../ascii/char-width.ts'
 import { preprocessMermaidBlocks, renderMarkdownToTerminal, parseGlowmArgs, parseMdvArgs, runGlowmCli, runMdvCli } from '../mdv.ts'
+
+const require = createRequire(import.meta.url)
+const packageVersion = String(require('../../package.json').version)
 
 describe('preprocessMermaidBlocks', () => {
   it('replaces mermaid fences with fenced ASCII text blocks', () => {
@@ -115,7 +119,7 @@ describe('renderMarkdownToTerminal', () => {
 
   it('keeps code block top border aligned for bash fences', async () => {
     const output = await renderMarkdownToTerminal(
-      '```bash\nbun install -g mdv\nmdv README.md\n```',
+      '```bash\nnpm install -g @zhenhuaa/mdv\nmdv README.md\n```',
       { useColor: true, width: 80 }
     )
 
@@ -125,7 +129,7 @@ describe('renderMarkdownToTerminal', () => {
       .map(line => line.replace(/\x1B\[[0-9;?]*[ -/]*[@-~]/g, ''))
 
     expect(frameLines[0]).toContain('╭─ bash ')
-    expect(frameLines[1]).toContain('│ bun install -g mdv')
+    expect(frameLines[1]).toContain('│ npm install -g @zhenhuaa/mdv')
     expect(frameLines[2]).toContain('│ mdv README.md')
     expect(frameLines[3]).toContain('╰')
     expect(new Set(frameLines.map(line => stringWidth(line))).size).toBe(1)
@@ -434,7 +438,7 @@ describe('runMdvCli', () => {
       process.stdout.write = originalWrite
     }
 
-    expect(stdout.join('')).toContain('1.1.3')
+    expect(stdout.join('')).toContain(packageVersion)
   })
 
   it('shows doctor output', async () => {
