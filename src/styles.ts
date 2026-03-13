@@ -7,7 +7,7 @@
 // contains font metrics, spacing constants, and stroke widths.
 // ============================================================================
 
-import { measureTextWidth } from './text-metrics'
+import { measureTextWidth } from './text-metrics.ts'
 
 /** Average character width in px at the given font size and weight (proportional font) */
 export function estimateTextWidth(text: string, fontSize: number, fontWeight: number): number {
@@ -93,4 +93,3 @@ export const ARROW_HEAD = {
   width: 8,
   height: 5,
 } as const
-

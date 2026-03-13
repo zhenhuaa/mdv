@@ -1,6 +1,6 @@
 {
   "name": "@zhenhuaa/mdv",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "license": "MIT",
   "description": "Terminal Markdown browser with Mermaid rendering, plus a Mermaid SVG/ASCII rendering library.",
   "type": "module",
@@ -11,14 +11,14 @@
   },
   "exports": {
     ".": {
-      "bun": "./src/index.ts",
+      "bun": "./dist/index.js",
       "import": "./dist/index.js",
       "types": "./dist/index.d.ts"
     }
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/zhenhuaa/mdv.git"
+    "url": "git+https://github.com/zhenhuaa/mdv.git"
   },
   "homepage": "https://github.com/zhenhuaa/mdv",
   "bugs": {
